@@ -1,4 +1,5 @@
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.List;
 
 public class Account implements Serializable {
@@ -7,7 +8,7 @@ public class Account implements Serializable {
     private double balanceKGS;
     private String name;
     private User accountHolder;
-    List<Transaction> transactions;
+    List<Transaction> transactions = new ArrayList<>();
 
     public Account(int id, String name, User accountHolder) {
         this.id = id;
@@ -52,10 +53,6 @@ public class Account implements Serializable {
 
     public String getName() {
         return name;
-    }
-
-    public void setName(String name) {
-        this.name = name;
     }
 
     public User getAccountHolder() {

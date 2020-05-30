@@ -1,10 +1,12 @@
 import java.io.*;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 public class Main {
 
-    private static final ArrayList<User> loggedUser = new ArrayList<>();
+    static User loggedUser = new User();
     private static ArrayList <Integer> ids = new ArrayList<>();
 
     public static void main(String[] args) {
@@ -48,15 +50,17 @@ public class Main {
 //        accounts.add(ikbolUSD);
 
         String bankName = "Demir Bank";
-        Bank bank = new Bank(bankName,customers,accounts);
+        Bank bank = new Bank(bankName, customers, accounts);
         BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
         System.out.println("Welcome to Demir Bank Online Banking...");
         try {
             ObjectInputStream ois = new ObjectInputStream(new FileInputStream("bankDatabase"));
             bank = (Bank) ois.readObject();
             ois.close();
-        } catch (IOException | ClassNotFoundException e) {
+        } catch (FileNotFoundException e) {
             System.out.println("Bank database is missing");
+        } catch (IOException | ClassNotFoundException e) {
+            e.printStackTrace();
         }
         mainMenu (bank, reader);
     }
@@ -74,7 +78,7 @@ public class Main {
                     for ( User u: bank.getCustomers()) {
                         if (u.getLogin().equals(login) && u.getPassword().equals(password)){
                             System.out.println("Welcome back, " + u.getFirstName() + " " + u.getLastName() + "!");
-                            loggedUser.add(u);
+                            loggedUser = u;
                             loggedMenu(bank,reader);
                         }
                     }
@@ -107,31 +111,31 @@ public class Main {
         System.out.println("3. Withdraw");
         System.out.println("4. Transfer cash");
         System.out.println("5. Transaction history");
-        System.out.println("6. Manage my account");
+        System.out.println("6. Manage my personal information");
         System.out.println("7. Logout");
 
         try {
-            String choice = reader.readLine();
+            byte choice = Byte.parseByte(reader.readLine());
             switch (choice){
-                case "1":
+                case 1:
                     accountInfo ();
                     loggedMenu(bank, reader);
-                case "2":
+                case 2:
                     deposit(reader);
                     loggedMenu(bank, reader);
-                case "3":
+                case 3:
                     withdraw(reader);
                     loggedMenu(bank, reader);
-                case "4":
+                case 4:
                     transfer(bank, reader);
                     loggedMenu(bank, reader);
-                case "5":
-                    transactionHistory(bank);
+                case 5:
+                    transactionHistory(reader);
                     loggedMenu(bank, reader);
-                case "6":
-                       manageAccount (bank, reader);
-                       loggedMenu(bank, reader);
-                case "7":
+                case 6:
+                    manageUserData(bank, reader);
+                    loggedMenu(bank, reader);
+                case 7:
                     System.out.println("Logging out...");
                     try {
                         ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream("bankDatabase"));
@@ -140,7 +144,6 @@ public class Main {
                     } catch (IOException e) {
                         System.out.println("Bank database is corrupted");
                     }
-                    loggedUser.clear();
                     System.exit(0);
             }
         } catch (IOException | NumberFormatException e) {
@@ -150,7 +153,7 @@ public class Main {
     }
 
     private static void accountInfo() {
-        User user = loggedUser.get(0);
+        User user = loggedUser;
         System.out.println(user.getFirstName() + " " + user.getLastName() + " has following accounts:");
         System.out.println();
         System.out.println("USD account: id: " + user.getAccountList().get(0).getId() + " | balance: " + user.getAccountList().get(0).getBalanceUSD());
@@ -159,7 +162,7 @@ public class Main {
     }
 
     private static void deposit(BufferedReader reader) throws IOException {
-        User user = loggedUser.get(0);
+        User user = loggedUser;
         System.out.println("Which account do you want to deposit?");
         System.out.println("1. USD");
         System.out.println("2. KGS");
@@ -169,16 +172,26 @@ public class Main {
 
         if (choice == 1){
             user.getAccountList().get(0).depositBalanceUSD(deposit);
+            Date date = new Date();
+            Transaction t = new Transaction(deposit,"deposit", date, user.getAccountList().get(0));
+            List<Transaction> transactions = user.getAccountList().get(0).getTransactions();
+            transactions.add(t);
+            user.getAccountList().get(0).setTransactions(transactions);
             System.out.println(deposit + " USD has been deposited to your account");
         }
         else if (choice == 2){
             user.getAccountList().get(1).depositBalanceKSG(deposit);
+            Date date = new Date();
+            Transaction t = new Transaction(deposit,"deposit", date, user.getAccountList().get(1));
+            List<Transaction> transactions = user.getAccountList().get(1).getTransactions();
+            transactions.add(t);
+            user.getAccountList().get(1).setTransactions(transactions);
             System.out.println(deposit + " KGS has been deposited to your account");
         }
     }
 
     private static void withdraw(BufferedReader reader) throws IOException {
-        User user = loggedUser.get(0);
+        User user = loggedUser;
         System.out.println("From which account do you want to withdraw?");
         System.out.println("1. USD");
         System.out.println("2. KGS");
@@ -188,16 +201,26 @@ public class Main {
 
         if (choice == 1){
             user.getAccountList().get(0).withdrawBalanceUSD(isWithdrawn);
+            Date date = new Date();
+            Transaction t = new Transaction(isWithdrawn,"withdrawal", date, user.getAccountList().get(0));
+            List<Transaction> transactions = user.getAccountList().get(0).getTransactions();
+            transactions.add(t);
+            user.getAccountList().get(0).setTransactions(transactions);
             System.out.println(isWithdrawn + " USD has been withdrawn from your account");
         }
         else if (choice == 2){
             user.getAccountList().get(1).withdrawBalanceKGS(isWithdrawn);
+            Date date = new Date();
+            Transaction t = new Transaction(isWithdrawn,"withdrawal", date, user.getAccountList().get(1));
+            List<Transaction> transactions = user.getAccountList().get(1).getTransactions();
+            transactions.add(t);
+            user.getAccountList().get(1).setTransactions(transactions);
             System.out.println(isWithdrawn + " KGS has been withdrawn from your account");
         }
     }
 
     private static void transfer(Bank bank, BufferedReader reader) throws IOException {
-        User user = loggedUser.get(0);
+        User user = loggedUser;
         double balance = 0;
         Account account = new Account();
         System.out.println("From which account do you want to transfer?");
@@ -232,11 +255,35 @@ public class Main {
                 if (a.getId() == chosenAccount && choice == 1){
                     a.depositBalanceUSD(transfer);
                     account.withdrawBalanceUSD(transfer);
+
+                    Date date = new Date();
+                    Transaction t = new Transaction(transfer,"outgoing transfer", date, account);
+                    List<Transaction> transactions = account.getTransactions();
+                    transactions.add(t);
+                    account.setTransactions(transactions);
+
+                    Transaction t1 = new Transaction(transfer,"incoming transfer", date, a);
+                    List<Transaction> transactions1 = a.getTransactions();
+                    transactions1.add(t1);
+                    a.setTransactions(transactions1);
+
                     System.out.println(transfer + " USD has been transferred to the account " + a.getId() + ", owned by " + a.getAccountHolder().getFirstName() + " " + a.getAccountHolder().getLastName());
                 }
                 else if (a.getId() == chosenAccount && choice == 2){
                     a.depositBalanceKSG(transfer);
                     account.withdrawBalanceKGS(transfer);
+
+                    Date date = new Date();
+                    Transaction t = new Transaction(transfer,"outgoing transfer", date, account);
+                    List<Transaction> transactions = account.getTransactions();
+                    transactions.add(t);
+                    account.setTransactions(transactions);
+
+                    Transaction t1 = new Transaction(transfer,"incoming transfer", date, a);
+                    List<Transaction> transactions1 = a.getTransactions();
+                    transactions1.add(t1);
+                    a.setTransactions(transactions1);
+
                     System.out.println(transfer + " KGS has been transferred to the account " + a.getId() + ", owned by " + a.getAccountHolder().getFirstName() + " " + a.getAccountHolder().getLastName());
                 }
             }
@@ -244,11 +291,81 @@ public class Main {
 
     }
 
-    private static void transactionHistory(Bank bank) {
-
+    private static void transactionHistory(BufferedReader reader) throws IOException {
+        User user = loggedUser;
+        SimpleDateFormat sdf = new SimpleDateFormat("dd-MM-yyyy  HH:mm:ss");
+        System.out.println("Please, select the account...");
+        System.out.println();
+        System.out.println("1. USD");
+        System.out.println("2. KGS");
+        byte choice = Byte.parseByte(reader.readLine());
+        if (choice == 1){
+            for (Transaction t: user.getAccountList().get(0).getTransactions()) {
+                System.out.println("Amount: " + t.getAmount() + " | Type of transaction: " + t.getTypeOfTransaction() + " | Time: " + sdf.format(t.getTimeStamp()));
+                System.out.println("----------------------------------------------------------");
+            }
+        }
+        else if (choice == 2){
+            for (Transaction t: user.getAccountList().get(1).getTransactions()) {
+                System.out.println("Amount: " + t.getAmount() + " | Type of transaction: " + t.getTypeOfTransaction() + " | Time: " + sdf.format(t.getTimeStamp()));
+                System.out.println("----------------------------------------------------------");
+            }
+        }
     }
 
-    private static void manageAccount(Bank bank, BufferedReader reader) {
+    private static void manageUserData(Bank bank, BufferedReader reader) {
+        User user = loggedUser;
+        System.out.println("Your personal information:");
+        System.out.println("---------------------------------------------");
+        System.out.println("First Name: " + user.getFirstName());
+        System.out.println("Last Name: " + user.getLastName());
+        System.out.println("Login: " + user.getLogin());
+        System.out.println("Password: " + user.getPassword());
+        System.out.println("Accounts: " + user.getAccountList().get(0).getName() + ", " + user.getAccountList().get(1).getName());
+        System.out.println("---------------------------------------------");
+        System.out.println();
+        System.out.println("Please choose your option...");
+        System.out.println();
+        System.out.println("1. Change my first name");
+        System.out.println("2. Change my last name");
+        System.out.println("3. Change my login");
+        System.out.println("4. Change my password");
+        System.out.println("5. Exit to main menu");
+
+        try {
+            byte choice = Byte.parseByte(reader.readLine());
+            switch (choice){
+                case 1:
+                    System.out.println("Please, enter your new first name...");
+                    String firstName = reader.readLine();
+                    user.setFirstName(firstName);
+                    System.out.println("Your first name has been changed!");
+                    loggedMenu(bank, reader);
+                case 2:
+                    System.out.println("Please, enter your new last name...");
+                    String lastName = reader.readLine();
+                    user.setLastName(lastName);
+                    System.out.println("Your last name has been changed!");
+                    loggedMenu(bank, reader);
+                case 3:
+                    System.out.println("Please, enter your new login...");
+                    String login = reader.readLine();
+                    user.setLogin(login);
+                    System.out.println("Your login has been changed! Please, sign in again with new login...");
+                    mainMenu(bank, reader);
+                case 4:
+                    System.out.println("Please, enter your new password...");
+                    String password = reader.readLine();
+                    user.setPassword(password);
+                    System.out.println("Your password has been changed! Please, sign in again with new password...");
+                    mainMenu(bank, reader);
+                case 5:
+                    loggedMenu(bank, reader);
+            }
+        } catch (IOException | NumberFormatException e) {
+            System.out.println("Please, enter a valid digit");
+            loggedMenu(bank,reader);
+        }
 
     }
 
